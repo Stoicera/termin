@@ -1,0 +1,85 @@
+# Template: compose.yml for the Dokploy compose service "termin" (Stoicera/termin deploy/compose.yml once that repo exists).
+# NOT deployed (decision 2026-10-21: Ghost first; Cal waits for C0, C3, C5, C7). Runbook docs/runbooks/cal.md.
+# Cal.diy "Termin buchen" on the Dokploy app node skdevserver1. Routing via labels on dokploy-network.
+services:
+  cal:
+    image: ghcr.io/stoicera/termin-cal:0f19cc46ef6b6426ee398c670575b3c96be7af9e   # new tag per rebuild (build.yml); a moved tag is not re-pulled
+    restart: unless-stopped
+    environment:
+      DATABASE_HOST: cal-db:5432                           # start.sh waits for it
+      DATABASE_URL: postgresql://cal:${CAL_DB_PASSWORD}@cal-db:5432/cal
+      DATABASE_DIRECT_URL: postgresql://cal:${CAL_DB_PASSWORD}@cal-db:5432/cal
+      NEXT_PUBLIC_WEBAPP_URL: https://termin.stoicera.com
+      NEXTAUTH_URL: https://termin.stoicera.com
+      NEXTAUTH_SECRET: ${CAL_NEXTAUTH_SECRET}
+      CALENDSO_ENCRYPTION_KEY: ${CAL_ENCRYPTION_KEY}
+      ALLOWED_HOSTNAMES: '"termin.stoicera.com"'
+      CALCOM_TELEMETRY_DISABLED: "1"
+      GOOGLE_LOGIN_ENABLED: "false"
+      EMAIL_FROM: termin@mail.stoicera.com
+      EMAIL_FROM_NAME: Stoicera Termine
+      EMAIL_SERVER_HOST: smtp.resend.com
+      EMAIL_SERVER_PORT: "587"                             # Hetzner Cloud blocks 25/465 outbound
+      EMAIL_SERVER_USER: resend
+      EMAIL_SERVER_PASSWORD: ${RESEND_SMTP_PASSWORD}
+    depends_on:
+      cal-db:
+        condition: service_healthy
+    mem_limit: 1g
+    networks: [default, dokploy-network]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      - traefik.http.services.termin.loadbalancer.server.port=3000
+      - traefik.http.middlewares.termin-https.redirectscheme.scheme=https
+      - traefik.http.routers.termin-http.rule=Host(`termin.stoicera.com`)
+      - traefik.http.routers.termin-http.entrypoints=web
+      - traefik.http.routers.termin-http.middlewares=termin-https
+      # Main router; short CTA paths redirect to the user's event pages.
+      - traefik.http.middlewares.termin-kurz.redirectregex.regex=^https://termin\.stoicera\.com/(erstgespraech|demo-kfz-digital|demo-mealtime|demo-wachsam)/?$$
+      - traefik.http.middlewares.termin-kurz.redirectregex.replacement=https://termin.stoicera.com/sebastian/$${1}
+      - traefik.http.routers.termin.rule=Host(`termin.stoicera.com`)
+      - traefik.http.routers.termin.entrypoints=websecure
+      - traefik.http.routers.termin.tls.certresolver=letsencrypt
+      - traefik.http.routers.termin.middlewares=termin-kurz
+      # Signup closed for everyone: an allowlist nobody outside the container matches → 403.
+      - traefik.http.middlewares.termin-deny.ipallowlist.sourcerange=127.0.0.1/32
+      - traefik.http.routers.termin-signup.rule=Host(`termin.stoicera.com`) && (PathPrefix(`/signup`) || PathPrefix(`/auth/signup`) || PathPrefix(`/api/auth/signup`))
+      - traefik.http.routers.termin-signup.entrypoints=websecure
+      - traefik.http.routers.termin-signup.tls.certresolver=letsencrypt
+      - traefik.http.routers.termin-signup.middlewares=termin-deny
+      - traefik.http.routers.termin-signup.priority=1000
+      - traefik.http.routers.termin-signup.service=termin
+      # Second line behind Cloudflare: per client IP on login and booking endpoints.
+      - traefik.http.middlewares.termin-rl.ratelimit.average=2
+      - traefik.http.middlewares.termin-rl.ratelimit.burst=20
+      - traefik.http.middlewares.termin-rl.ratelimit.sourcecriterion.requestheadername=CF-Connecting-IP
+      - traefik.http.routers.termin-auth.rule=Host(`termin.stoicera.com`) && (PathPrefix(`/api/auth`) || PathPrefix(`/auth/login`) || PathPrefix(`/api/book`))
+      - traefik.http.routers.termin-auth.entrypoints=websecure
+      - traefik.http.routers.termin-auth.tls.certresolver=letsencrypt
+      - traefik.http.routers.termin-auth.middlewares=termin-rl
+      - traefik.http.routers.termin-auth.priority=500
+      - traefik.http.routers.termin-auth.service=termin
+
+  cal-db:
+    image: postgres:16.15-alpine        # newest 16.x on Docker Hub, checked 2026-10-21
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cal
+      POSTGRES_PASSWORD: ${CAL_DB_PASSWORD}
+      POSTGRES_DB: cal
+    volumes:
+      - cal-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cal -d cal"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    mem_limit: 256m
+
+volumes:
+  cal-db:
+
+networks:
+  dokploy-network:
+    external: true
