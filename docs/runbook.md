@@ -1,4 +1,4 @@
-# Runbook — Cal.diy "Termin buchen" (termin.stoicera.com) — prepared, not deployed
+# Runbook — Cal.diy "Termin buchen" (termin.stoicera.com) — deployed 2026-10-27 (see AGENTS.md, SSOT ops/runlog.md)
 
 Goal: `core/26` Ziel 1 (one CTA "Termin buchen" for everything). Source prompt: SSOT `ai/prompts/deploy-cal.md` (15.10.2026). State 2026-10-21: templates in `deploy/cal/`, nothing running. Decision 2026-10-21 (orchestrator): Ghost first; Cal waits for its open human steps and a week of real Ghost memory numbers.
 

@@ -25,7 +25,7 @@ services:
     depends_on:
       cal-db:
         condition: service_healthy
-    mem_limit: 1g
+    mem_limit: 1536m                                     # measured 806–820 MiB after start (2026-10-27); 1 GiB left no headroom
     networks: [default, dokploy-network]
     labels:
       - traefik.enable=true
@@ -41,7 +41,9 @@ services:
       - traefik.http.routers.termin.rule=Host(`termin.stoicera.com`)
       - traefik.http.routers.termin.entrypoints=websecure
       - traefik.http.routers.termin.tls.certresolver=letsencrypt
-      - traefik.http.routers.termin.middlewares=termin-kurz
+      - traefik.http.routers.termin.middlewares=cloudflare-only@file,termin-kurz
+      # cloudflare-only@file (node: /etc/dokploy/traefik/dynamic/zz-cloudflare-only.yml): only Cloudflare reaches the origin,
+      # so Access cannot be bypassed via the server IP and CF-Connecting-IP cannot be forged (review 2026-10-27 K2).
       # Signup closed for everyone: an allowlist nobody outside the container matches → 403.
       - traefik.http.middlewares.termin-deny.ipallowlist.sourcerange=127.0.0.1/32
       - traefik.http.routers.termin-signup.rule=Host(`termin.stoicera.com`) && (PathPrefix(`/signup`) || PathPrefix(`/auth/signup`) || PathPrefix(`/api/auth/signup`))
@@ -57,7 +59,7 @@ services:
       - traefik.http.routers.termin-auth.rule=Host(`termin.stoicera.com`) && (PathPrefix(`/api/auth`) || PathPrefix(`/auth/login`) || PathPrefix(`/api/book`))
       - traefik.http.routers.termin-auth.entrypoints=websecure
       - traefik.http.routers.termin-auth.tls.certresolver=letsencrypt
-      - traefik.http.routers.termin-auth.middlewares=termin-rl
+      - traefik.http.routers.termin-auth.middlewares=cloudflare-only@file,termin-rl
       - traefik.http.routers.termin-auth.priority=500
       - traefik.http.routers.termin-auth.service=termin
 
