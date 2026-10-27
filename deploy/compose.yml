@@ -1,5 +1,5 @@
-# Template: compose.yml for the Dokploy compose service "termin" (Stoicera/termin deploy/compose.yml once that repo exists).
-# NOT deployed (decision 2026-10-21: Ghost first; Cal waits for C0, C3, C5, C7). Runbook docs/runbooks/cal.md.
+# Dokploy compose service "termin" (project "termin") on skdevserver1, pushed by scripts/deploy-dokploy.sh (source raw,
+# env from deploy/cal.env.tpl via op inject). Runbook docs/runbook.md. First deployed 2026-10-27.
 # Cal.diy "Termin buchen" on the Dokploy app node skdevserver1. Routing via labels on dokploy-network.
 services:
   cal:
