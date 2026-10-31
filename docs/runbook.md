@@ -53,3 +53,14 @@ jq -n --arg a "$(openssl rand -hex 32)" --arg b "$(openssl rand -base64 32)" --a
 ```
 
 Rollback and runlog template: SSOT `ai/prompts/deploy-cal.md`.
+
+## State 2026-10-31 — live, link released
+
+- Admin `sebastian` (2FA) exists since 27.10. Access app "Termin (Cal) Anmeldung und Verwaltung" covers only `/auth`, `/api/auth/callback`, `/api/auth/signin` and the admin pages (event-types, bookings, availability, settings, apps, …); booking pages, `/api/trpc`, `/api/book` are public. Before-state: SSOT `~/Work/.backups/termin-2026-10-31/` (laptop).
+- Event types (user `sebastian`): `erstgespraech` 20 min, `demo-kfz-digital` 30, `demo-mealtime` 30, `demo-wachsam` 30 hidden until Tor W. Location: attendee phone (we call). Field "Firma oder Organisation" optional. Notice 12 h, buffer after 10 min, bookable 45 days ahead, title `{Event type title} mit {Scheduler} (Stoicera)`.
+- Schedule "Geschäftszeiten": Mon–Fri 09–12 and 14–16 Europe/Vienna. Account locale de, 24 h, week starts Monday.
+- Calendar: Sebastian's Nextcloud business calendar (Hetzner Storage Share) as ICS feed, "check for conflicts" on (verified 31.10.: 4.11. shows only the slots outside his entries). ICS is read-only: bookings arrive as e-mail invitations; writing into Nextcloud needs the CalDAV app with a Nextcloud app password (human step, entered by Sebastian in Apps → CalDAV).
+- `/` and the short paths redirect to `/sebastian/...` (Traefik `termin-kurz`).
+- Booking test 31.10.: booking → confirmation via Resend delivered (organizer de, attendee in browser language) → slot gone → cancel → cancellation mails → slot free; test booking deleted.
+- Retention: `scripts/retention.sh` → `/opt/termin/scripts/retention.sh`, cron 03:15 UTC on the 1st, deletes bookings 12 months after the appointment (privacy notices stoicera.com and Werkbank).
+- Open: booking page footer says "Cal.diy's Terms" (upstream string; links point to stoicera.com) — set the app name at the next monthly rebuild; M3 Trivy findings (rebuild, next-auth 4.24.15).

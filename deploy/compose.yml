@@ -35,8 +35,9 @@ services:
       - traefik.http.routers.termin-http.rule=Host(`termin.stoicera.com`)
       - traefik.http.routers.termin-http.entrypoints=web
       - traefik.http.routers.termin-http.middlewares=termin-https
-      # Main router; short CTA paths redirect to the user's event pages.
-      - traefik.http.middlewares.termin-kurz.redirectregex.regex=^https://termin\.stoicera\.com/(erstgespraech|demo-kfz-digital|demo-mealtime|demo-wachsam)/?$$
+      # Main router; short CTA paths redirect to the user's event pages, the bare host to the profile page
+      # (otherwise Cal sends visitors to /auth/login, which sits behind Cloudflare Access).
+      - traefik.http.middlewares.termin-kurz.redirectregex.regex=^https://termin\.stoicera\.com/(erstgespraech|demo-kfz-digital|demo-mealtime|demo-wachsam)?/?$$
       - traefik.http.middlewares.termin-kurz.redirectregex.replacement=https://termin.stoicera.com/sebastian/$${1}
       - traefik.http.routers.termin.rule=Host(`termin.stoicera.com`)
       - traefik.http.routers.termin.entrypoints=websecure
